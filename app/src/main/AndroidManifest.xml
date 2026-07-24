@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- Added for Step 6 (proctoring) -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature
+        android:name="android.hardware.camera"
+        android:required="true" />
+    <uses-feature
+        android:name="android.hardware.camera.front"
+        android:required="true" />
+
+    <application
+        android:name=".App"
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.Bantayex">
+
+        <activity android:name=".MainActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <activity android:name=".features.welcome.WelcomeActivity"
+            android:exported="false" />
+
+        <!-- Auth (Step 2) -->
+        <activity android:name=".features.auth.login.LoginActivity"
+            android:exported="false" />
+
+        <!-- Professor (Step 4a/4b/4c) -->
+        <activity android:name=".features.professor.dashboard.ProfessorDashboardActivity"
+            android:exported="false" />
+        <activity android:name=".features.professor.createexam.CreateExamActivity"
+            android:exported="false" />
+        <activity android:name=".features.professor.results.ExamResultsActivity"
+            android:exported="false" />
+
+        <!-- Student (Steps 3, 5a-5c, 6b-6c) -->
+        <activity android:name=".features.student.entercode.EnterCodeActivity"
+            android:exported="false" />
+        <activity android:name=".features.student.examdetails.ExamDetailsActivity"
+            android:exported="false" />
+        <activity android:name=".features.student.examrules.ExamRulesActivity"
+            android:exported="false" />
+        <activity
+            android:name=".features.student.calibration.CalibrationActivity"
+            android:exported="false"
+            android:screenOrientation="portrait" />
+        <activity
+            android:name=".features.student.takeexam.TakeExamActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:screenOrientation="portrait" />
+        <activity android:name=".features.student.result.ResultActivity"
+            android:exported="false" />
+
+    </application>
+</manifest>

@@ -1,0 +1,67 @@
+{
+  "project_info": {
+    "project_number": "72247333694",
+    "project_id": "examsystem-34b00",
+    "storage_bucket": "examsystem-34b00.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:72247333694:android:5184848168934ff531126f",
+        "android_client_info": {
+          "package_name": "com.bantayex"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAt1IMiPVOwnzM_13tVHgURJKFzjEA2fa0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:72247333694:android:962022519144a11231126f",
+        "android_client_info": {
+          "package_name": "com.examapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAt1IMiPVOwnzM_13tVHgURJKFzjEA2fa0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:72247333694:android:72a1ae38cf9f38ad31126f",
+        "android_client_info": {
+          "package_name": "com.example.bantayex"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAt1IMiPVOwnzM_13tVHgURJKFzjEA2fa0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

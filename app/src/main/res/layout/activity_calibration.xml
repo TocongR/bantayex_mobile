@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#000000"
+    android:fitsSystemWindows="false">
+
+    <androidx.camera.view.PreviewView
+        android:id="@+id/previewView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"/>
+
+    <!-- Solid white backdrop shown only once calibration actually starts -->
+    <View
+        android:id="@+id/whiteBackground"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#FFFFFF"
+        android:visibility="gone"/>
+
+    <com.example.bantayex.monitoring.FaceMeshOverlayView
+        android:id="@+id/overlayView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"/>
+
+    <!-- Pre-calibration prompt: shown before the user taps Start -->
+    <LinearLayout
+        android:id="@+id/preCalibrationContainer"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:padding="32dp"
+        android:background="#66000000"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/tvPositionHint"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Position your head in the center of the frame"
+            android:textColor="#FFFFFF"
+            android:textSize="16sp"
+            android:gravity="center"
+            android:layout_marginBottom="24dp"/>
+
+        <Button
+            android:id="@+id/btnStartCalibration"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Start Calibration"/>
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:layout_gravity="bottom"
+        android:background="#CC000000"
+        android:padding="20dp">
+
+        <TextView
+            android:id="@+id/tvCalibrationFailed"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Calibration failed. Make sure your face is visible and well-lit."
+            android:textColor="#FFFFFF"
+            android:textSize="14sp"
+            android:gravity="center"
+            android:visibility="gone"
+            android:layout_marginBottom="12dp"/>
+
+        <Button
+            android:id="@+id/btnRetry"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Retry calibration"
+            android:visibility="gone"/>
+
+    </LinearLayout>
+
+</FrameLayout>

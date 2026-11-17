@@ -23,34 +23,59 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"/>
 
-    <!-- Pre-calibration prompt: shown before the user taps Start -->
-    <LinearLayout
+    <!-- Pre-calibration guide: shown before the user taps Start -->
+    <ScrollView
         android:id="@+id/preCalibrationContainer"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:orientation="vertical"
-        android:gravity="center"
-        android:padding="32dp"
         android:background="#66000000"
+        android:fillViewport="true"
         android:visibility="gone">
 
-        <TextView
-            android:id="@+id/tvPositionHint"
-            android:layout_width="wrap_content"
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Position your head in the center of the frame"
-            android:textColor="#FFFFFF"
-            android:textSize="16sp"
+            android:orientation="vertical"
             android:gravity="center"
-            android:layout_marginBottom="24dp"/>
+            android:padding="32dp">
 
-        <Button
-            android:id="@+id/btnStartCalibration"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Start Calibration"/>
+            <ImageView
+                android:id="@+id/imgCalibrationGuide"
+                android:layout_width="wrap_content"
+                android:layout_height="170dp"
+                android:layout_gravity="center_horizontal"
+                android:adjustViewBounds="true"
+                android:src="@drawable/calibration_guide"
+                android:contentDescription="Phone screen showing the nine calibration dots, with the center dot marked first"
+                android:layout_marginBottom="16dp"/>
 
-    </LinearLayout>
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="• Keep your face centered in the frame.\n• Look straight at the center dot first to set your starting position.\n• When the next dot appears, follow it with your eyes and hold your gaze on it until it moves.\n• Keep your head and phone still for the whole calibration — only your eyes should move."
+                android:textColor="@color/white"
+                android:textSize="14sp"
+                android:lineSpacingMultiplier="1.3"
+                android:layout_marginBottom="16dp"/>
+
+            <TextView
+                android:id="@+id/tvPositionHint"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Position your head in the center of the frame"
+                android:textColor="#FFFFFF"
+                android:textSize="16sp"
+                android:gravity="center"
+                android:layout_marginBottom="24dp"/>
+
+            <Button
+                android:id="@+id/btnStartCalibration"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Start Calibration"/>
+
+        </LinearLayout>
+    </ScrollView>
 
     <LinearLayout
         android:layout_width="match_parent"

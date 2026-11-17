@@ -13,12 +13,9 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-/**
- * Unchanged from the Step 4c version except formatViolationType() is gone — it now
- * calls the shared ViolationLabels.labelFor() (see data/ViolationLabels.kt) instead of
- * duplicating its own copy of the same mapping with slightly different wording.
- */
-class ResultsListAdapter : ListAdapter<ExamResult, ResultsListAdapter.ResultViewHolder>(DiffCallback()) {
+class ResultsListAdapter(
+    private val onViewEvidence: (ExamResult) -> Unit
+) : ListAdapter<ExamResult, ResultsListAdapter.ResultViewHolder>(DiffCallback()) {
 
     inner class ResultViewHolder(private val binding: ItemResultBinding) :
         RecyclerView.ViewHolder(binding.root) {
@@ -49,6 +46,18 @@ class ResultsListAdapter : ListAdapter<ExamResult, ResultsListAdapter.ResultView
                             (if (!result.gazeMonitoringEnabled) "\n(no camera consent)" else "")
             } else {
                 binding.tvViolations.visibility = View.GONE
+            }
+
+            // Photos are NOT loaded here (keeps the list fast and saves Firestore reads);
+            // they are fetched only when the professor taps this link.
+            val proofCount = result.violationLog.count { it.proofId.isNotEmpty() }
+            if (proofCount > 0) {
+                binding.tvViewEvidence.visibility = View.VISIBLE
+                binding.tvViewEvidence.text = "View evidence ($proofCount)"
+                binding.tvViewEvidence.setOnClickListener { onViewEvidence(result) }
+            } else {
+                binding.tvViewEvidence.visibility = View.GONE
+                binding.tvViewEvidence.setOnClickListener(null)
             }
         }
     }

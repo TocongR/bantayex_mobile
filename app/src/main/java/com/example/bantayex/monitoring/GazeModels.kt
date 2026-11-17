@@ -1,10 +1,12 @@
 package com.example.bantayex.monitoring
 
 /**
- * Was one 691-line file bundling 4 enums, 5 data classes, GazeCalculator, RidgeRegression,
- * and CalibrationManager all together. Split into one file per concern — this file now
- * only holds the plain data shapes everything else operates on. Logic is byte-for-byte
- * unchanged; only file organization changed.
+ * Plain data shapes the monitoring package operates on.
+ *
+ * Changed for the GazeDebug pipeline sync: CalibrationData now carries baselineYaw /
+ * baselinePitch (head pose captured while looking at the centre calibration dot).
+ * GazeData no longer has `direction` (matches GazeDebug; nothing in BantayEx read it —
+ * use CalibrationManager.getGazeDirection() if a direction is needed).
  */
 
 enum class GazeDirection {
@@ -31,7 +33,6 @@ enum class CalibrationState {
 }
 
 data class GazeData(
-    val direction: GazeDirection,
     val irisX: Float,
     val irisY: Float,
     val eyeOpenness: Float,
@@ -61,19 +62,26 @@ data class CalibrationSampleY(
 data class CalibrationData(
     var weightsX: FloatArray = floatArrayOf(0f, 1f, 0f, 0f, 0f),
     var weightsY: FloatArray = floatArrayOf(0f, 1f, 0f, 0f, 0f, 0f),
-    var isCalibrated: Boolean = false
+    var isCalibrated: Boolean = false,
+    // Head pose while looking straight at the screen (centre calibration dot).
+    var baselineYaw: Float = 0f,
+    var baselinePitch: Float = 0f
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is CalibrationData) return false
         return weightsX.contentEquals(other.weightsX) &&
                 weightsY.contentEquals(other.weightsY) &&
-                isCalibrated == other.isCalibrated
+                isCalibrated == other.isCalibrated &&
+                baselineYaw == other.baselineYaw &&
+                baselinePitch == other.baselinePitch
     }
     override fun hashCode(): Int {
         var result = weightsX.contentHashCode()
         result = 31 * result + weightsY.contentHashCode()
         result = 31 * result + isCalibrated.hashCode()
+        result = 31 * result + baselineYaw.hashCode()
+        result = 31 * result + baselinePitch.hashCode()
         return result
     }
 }

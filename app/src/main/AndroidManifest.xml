@@ -51,6 +51,8 @@
             android:exported="false" />
         <activity android:name=".features.student.examrules.ExamRulesActivity"
             android:exported="false" />
+        <activity android:name=".features.student.setuptips.SetupTipsActivity"
+            android:exported="false" />
         <activity
             android:name=".features.student.calibration.CalibrationActivity"
             android:exported="false"

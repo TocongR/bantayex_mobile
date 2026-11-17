@@ -10,7 +10,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.example.bantayex.core.util.UiState
 import com.example.bantayex.databinding.ActivityExamRulesBinding
-import com.example.bantayex.features.student.calibration.CalibrationActivity
+import com.example.bantayex.features.student.setuptips.SetupTipsActivity
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 
@@ -39,7 +39,17 @@ class ExamRulesActivity : AppCompatActivity() {
 
         binding.btnBack.setOnClickListener { finish() }
 
+        // The consent gate lives on this screen because it sits right under the
+        // privacy explanation and before the schedule check proceeds, so nobody can
+        // reach the exam without acknowledging that proof photos may be saved.
+        binding.cbConsent.setOnCheckedChangeListener { _, _ -> updateContinueButton() }
+        updateContinueButton()
+
         observeProceedState()
+    }
+
+    private fun updateContinueButton() {
+        binding.btnContinue.isEnabled = binding.cbConsent.isChecked
     }
 
     private fun observeProceedState() {
@@ -50,7 +60,7 @@ class ExamRulesActivity : AppCompatActivity() {
                         null -> Unit
                         is UiState.Loading -> binding.btnContinue.isEnabled = false
                         is UiState.Success -> {
-                            val intent = Intent(this@ExamRulesActivity, CalibrationActivity::class.java)
+                            val intent = Intent(this@ExamRulesActivity, SetupTipsActivity::class.java)
                             intent.putExtra("examId", examId)
                             intent.putExtra("examCode", examCode)
                             intent.putExtra("studentName", studentName)
@@ -58,7 +68,7 @@ class ExamRulesActivity : AppCompatActivity() {
                             finish()
                         }
                         is UiState.Error -> {
-                            binding.btnContinue.isEnabled = true
+                            updateContinueButton()
                             Toast.makeText(this@ExamRulesActivity, state.message, Toast.LENGTH_LONG).show()
                             viewModel.resetState()
                         }

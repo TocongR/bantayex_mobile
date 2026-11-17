@@ -13,6 +13,7 @@ package com.example.bantayex.core.constants
 object FirestoreConstants {
     const val COLLECTION_EXAMS = "exams"
     const val COLLECTION_RESULTS = "results"
+    const val COLLECTION_VIOLATION_PROOFS = "violation_proofs"
 
     const val FIELD_EXAM_CODE = "examCode"
     const val FIELD_PROFESSOR_ID = "professorId"

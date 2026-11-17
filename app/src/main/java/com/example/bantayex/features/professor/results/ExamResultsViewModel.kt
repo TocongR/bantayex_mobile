@@ -5,6 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.example.bantayex.core.util.Result
 import com.example.bantayex.core.util.UiState
 import com.example.bantayex.data.model.ExamResult
+import com.example.bantayex.data.model.ViolationProof
+import com.example.bantayex.data.repository.ProofRepository
 import com.example.bantayex.data.repository.ResultRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -15,7 +17,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class ExamResultsViewModel @Inject constructor(
-    private val resultRepository: ResultRepository
+    private val resultRepository: ResultRepository,
+    private val proofRepository: ProofRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<UiState<List<ExamResult>>>(UiState.Loading)
@@ -30,4 +33,8 @@ class ExamResultsViewModel @Inject constructor(
             }
         }
     }
+
+    /** Evidence photos are only downloaded when the professor taps "View evidence". */
+    suspend fun fetchProofs(ids: List<String>): Result<List<ViolationProof>> =
+        proofRepository.getProofsByIds(ids)
 }

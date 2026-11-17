@@ -4,6 +4,8 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.Matrix
+import android.media.AudioManager
+import android.media.ToneGenerator
 import android.os.Bundle
 import android.os.CountDownTimer
 import android.os.Handler
@@ -28,6 +30,8 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.viewpager2.widget.ViewPager2
 import com.example.bantayex.R
 import com.example.bantayex.core.util.UiState
+import com.example.bantayex.data.ProofImageCodec
+import com.example.bantayex.data.repository.ProofRepository
 import com.example.bantayex.data.model.Exam
 import com.example.bantayex.data.model.Question
 import com.example.bantayex.data.model.Violation
@@ -37,6 +41,7 @@ import com.example.bantayex.monitoring.BlinkDetector
 import com.example.bantayex.monitoring.CalibrationManager
 import com.example.bantayex.monitoring.EyeState
 import com.example.bantayex.monitoring.GazeCalculator
+import com.example.bantayex.monitoring.GazeData
 import com.example.bantayex.monitoring.GazeStatus
 import com.google.mediapipe.framework.image.BitmapImageBuilder
 import com.google.mediapipe.tasks.core.BaseOptions
@@ -47,6 +52,9 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import javax.inject.Inject
+import kotlin.math.abs
+import java.util.concurrent.RejectedExecutionException
 import java.util.concurrent.TimeUnit
 
 /**
@@ -60,6 +68,12 @@ import java.util.concurrent.TimeUnit
  * actual asset sits at app/src/main/assets/face_landmarker.task, no "models/" subfolder.
  * The old TakeExamActivity's face landmarker would have silently failed to initialize
  * every single time. Fixed to match the real path.
+ *
+ * GAZEDEBUG SYNC: the monitoring loop now mirrors GazeDebug's DebugMonitorActivity —
+ * blink frames are skipped when routing verdicts, and look-away has a warning delay
+ * (CalibrationManager.warningDelayMs, default 2s): nothing shows for the first 2s away,
+ * then the warning banner + "tititit" tone appear, and the violation fires
+ * awayViolationThresholdMs (3s) after the warning appears (5s total).
  */
 @AndroidEntryPoint
 class TakeExamActivity : AppCompatActivity() {
@@ -76,6 +90,9 @@ class TakeExamActivity : AppCompatActivity() {
     private val violationHandler = Handler(Looper.getMainLooper())
     private val violationGraceMs = 1500L
     private var violationRunnable: Runnable? = null
+    private var pausedAtMs = 0L
+    private var appExitViolationRecorded = false
+    private var exitDialog: AlertDialog? = null
 
     // ── Monitoring fields ────────────────────────────────────────────────────
     private var monitoringEnabled = false
@@ -88,12 +105,32 @@ class TakeExamActivity : AppCompatActivity() {
     private val gazeViolationCooldownMs = 5000L
     private val blinkDetector = BlinkDetector()
 
+    // ── Proof photos ─────────────────────────────────────────────────────────
+    private var examCode = ""
+    private var studentName = ""
+    @Inject lateinit var proofRepository: ProofRepository
+    private var proofsCaptured = 0
+    private val maxProofsPerAttempt = 10   // bounds Firestore usage on the free Spark plan
+    @Volatile private var latestFrame: Bitmap? = null
+    // Last few camera frames keyed by the timestamp sent to MediaPipe, so each result can be
+    // matched to the exact frame it was computed from (results arrive a few frames late).
+    private val frameBuffer = LinkedHashMap<Long, Bitmap>()
+    private val frameBufferSize = 8
+    // Best proof frame of the current look-away episode (the one with the strongest deviation).
+    @Volatile private var peakAwayFrame: Bitmap? = null
+    private var peakAwayScore = -1f
+    private val proofExecutor: ExecutorService = Executors.newSingleThreadExecutor()
+
     // ── Away-time & repeated-glance abuse detection ─────────────────────────
     private var isCurrentlyAway = false
     private var awayStartTime = 0L
     private var awayViolationFired = false
+    private var awayWarningShown = false
     private val shortGlanceTimestamps = mutableListOf<Long>()
 
+    // Time from the warning appearing until the violation fires. The warning itself
+    // appears after calibrationManager.warningDelayMs (2s), so a look-away becomes a
+    // violation at warningDelayMs + awayViolationThresholdMs (5s total).
     private val awayViolationThresholdMs = 3000L
     private val minGlanceDurationMs = 250L
     private val rapidGlanceWindowMs = 10000L
@@ -114,6 +151,13 @@ class TakeExamActivity : AppCompatActivity() {
     private var bannerHoldUntil = 0L
     private val bannerHoldMs = 2000L
 
+    // ── Warning tone: "tititit" (3 short beeps), once per warning event. ────
+    private var warningTone: ToneGenerator? = null
+    private var lastWarningToneAt = 0L
+    private val warningToneDebounceMs = 1200L
+    private val warningToneTickMs = 90
+    private val warningToneGapMs = 140L
+
     private enum class GazeBannerState { OK, WARNING, VIOLATION, NO_FACE }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -129,8 +173,8 @@ class TakeExamActivity : AppCompatActivity() {
         binding = ActivityTakeExamBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        val examCode = intent.getStringExtra("examCode") ?: ""
-        val studentName = intent.getStringExtra("studentName") ?: ""
+        examCode = intent.getStringExtra("examCode") ?: ""
+        studentName = intent.getStringExtra("studentName") ?: ""
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
@@ -334,10 +378,16 @@ class TakeExamActivity : AppCompatActivity() {
                 postScale(-1f, 1f, bitmap.width / 2f, bitmap.height / 2f)
             }
             val corrected = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
+            latestFrame = corrected
+            val frameTs = SystemClock.uptimeMillis()
+            synchronized(frameBuffer) {
+                frameBuffer[frameTs] = corrected
+                while (frameBuffer.size > frameBufferSize) frameBuffer.remove(frameBuffer.keys.first())
+            }
             // Re-check right before the native call — isClosing may have
             // flipped while toBitmap()/createBitmap() were running.
             if (!isClosing) {
-                faceLandmarker?.detectAsync(BitmapImageBuilder(corrected).build(), SystemClock.uptimeMillis())
+                faceLandmarker?.detectAsync(BitmapImageBuilder(corrected).build(), frameTs)
             }
         } catch (e: Exception) {
         } finally {
@@ -365,27 +415,48 @@ class TakeExamActivity : AppCompatActivity() {
             isLidTransitioning = isLidTransitioning
         )
 
-        val alreadyLookingDown = status == GazeStatus.WARNING_DOWN ||
-                status == GazeStatus.OFF_SCREEN_DOWN
+        // Blink/lid-transition frames are not routed at all (same as GazeDebug):
+        // CalibrationManager already holds the last stable status through a blink, and
+        // the gaze features on these frames are unreliable.
+        if (!isLidTransitioning) {
+            when (status) {
+                GazeStatus.ON_SCREEN,
+                GazeStatus.WARNING_LEFT,
+                GazeStatus.WARNING_RIGHT,
+                GazeStatus.WARNING_UP,
+                GazeStatus.WARNING_DOWN -> {
+                    updateGazeBanner(GazeBannerState.OK)
+                    registerGazeOnScreen()
+                }
+                GazeStatus.OFF_SCREEN_LEFT,
+                GazeStatus.OFF_SCREEN_RIGHT,
+                GazeStatus.OFF_SCREEN_UP,
+                GazeStatus.OFF_SCREEN_DOWN -> {
+                    val frame = synchronized(frameBuffer) { frameBuffer[result.timestampMs()] } ?: latestFrame
+                    registerGazeAway("LOOK_AWAY", "Looking away", frame, awayScore(gaze))
+                }
+                GazeStatus.UNKNOWN -> { /* calibration not ready */ }
+            }
+        }
+    }
 
-        if (isLidTransitioning && !alreadyLookingDown) {
+    // ── Warning tone ─────────────────────────────────────────────────────────
+
+    private fun playWarningTone() {
+        val now = System.currentTimeMillis()
+        if (isClosing || isSubmitting || now - lastWarningToneAt < warningToneDebounceMs) return
+        lastWarningToneAt = now
+
+        val tone = warningTone ?: try {
+            ToneGenerator(AudioManager.STREAM_MUSIC, 75).also { warningTone = it }
+        } catch (e: RuntimeException) {
+            // Some devices refuse to create a ToneGenerator; the visual warning still works.
             return
         }
-
-        when (status) {
-            GazeStatus.ON_SCREEN,
-            GazeStatus.WARNING_LEFT,
-            GazeStatus.WARNING_RIGHT,
-            GazeStatus.WARNING_UP,
-            GazeStatus.WARNING_DOWN -> {
-                updateGazeBanner(GazeBannerState.OK)
-                registerGazeOnScreen()
-            }
-            GazeStatus.OFF_SCREEN_LEFT,
-            GazeStatus.OFF_SCREEN_RIGHT,
-            GazeStatus.OFF_SCREEN_UP,
-            GazeStatus.OFF_SCREEN_DOWN -> registerGazeAway("LOOK_AWAY", "Looking away")
-            GazeStatus.UNKNOWN -> { /* calibration not ready */ }
+        for (i in 0 until 3) {
+            violationHandler.postDelayed({
+                if (!isClosing && !isSubmitting) tone.startTone(ToneGenerator.TONE_PROP_BEEP, warningToneTickMs)
+            }, i * warningToneGapMs)
         }
     }
 
@@ -398,6 +469,7 @@ class TakeExamActivity : AppCompatActivity() {
             isCurrentlyFaceless = true
             facelessStartTime = now
             facelessViolationFired = false
+            playWarningTone()
         }
 
         val facelessDuration = now - facelessStartTime
@@ -422,25 +494,54 @@ class TakeExamActivity : AppCompatActivity() {
         facelessViolationFired = false
     }
 
-    private fun registerGazeAway(violationType: String, label: String) {
+    // ── Look-away: silent for warningDelayMs, then warning + tone, then violation ──
+
+    /** How far off-screen this frame looks (iris position and head turn). Only compared within one episode. */
+    private fun awayScore(gaze: GazeData): Float {
+        val x = calibrationManager.predictScreenX(gaze.irisX, gaze.irisY)
+        val y = calibrationManager.predictScreenY(gaze.irisY, gaze.eyeOpenness, gaze.upperLidDropRatio)
+        val irisDeviation = maxOf(abs(x - 0.5f), abs(y - 0.5f))
+        val headDeviation = abs(gaze.headPose.yaw) / calibrationManager.headYawThreshold * 0.5f
+        return maxOf(irisDeviation, headDeviation)
+    }
+
+    private fun registerGazeAway(violationType: String, label: String, frame: Bitmap?, score: Float) {
         val now = System.currentTimeMillis()
 
         if (!isCurrentlyAway) {
             isCurrentlyAway = true
             awayStartTime = now
             awayViolationFired = false
+            awayWarningShown = false
+            peakAwayFrame = null
+            peakAwayScore = -1f
+        }
+
+        // Keep the frame where the student looked furthest away during this episode.
+        if (frame != null && score > peakAwayScore) {
+            peakAwayFrame = frame
+            peakAwayScore = score
         }
 
         val awayDuration = now - awayStartTime
+        val delayMs = calibrationManager.warningDelayMs
 
-        if (awayDuration >= awayViolationThresholdMs) {
+        // Still inside the warning delay: nothing is shown or played yet.
+        if (awayDuration < delayMs) return
+
+        if (!awayWarningShown) {
+            awayWarningShown = true
+            playWarningTone()
+        }
+
+        if (awayDuration >= awayViolationThresholdMs + delayMs) {
             updateGazeBanner(GazeBannerState.VIOLATION, label)
             if (!awayViolationFired) {
                 awayViolationFired = true
-                logGazeEvent(violationType, isViolation = true)
+                logGazeEvent(violationType, isViolation = true, frame = peakAwayFrame ?: frame)
             }
         } else {
-            val remainingSec = (awayViolationThresholdMs - awayDuration) / 1000f
+            val remainingSec = (awayViolationThresholdMs + delayMs - awayDuration) / 1000f
             updateGazeBanner(GazeBannerState.WARNING, "$label — violation in ${"%.1f".format(remainingSec)}s")
         }
     }
@@ -453,6 +554,7 @@ class TakeExamActivity : AppCompatActivity() {
             }
             isCurrentlyAway = false
             awayViolationFired = false
+            awayWarningShown = false
         }
     }
 
@@ -463,7 +565,7 @@ class TakeExamActivity : AppCompatActivity() {
 
         if (shortGlanceTimestamps.size >= rapidGlanceMaxCount) {
             shortGlanceTimestamps.clear()
-            logGazeEvent("REPEATED_LOOK_AWAY", isViolation = true)
+            logGazeEvent("REPEATED_LOOK_AWAY", isViolation = true, frame = peakAwayFrame)
             updateGazeBanner(GazeBannerState.VIOLATION, "Repeated look-away pattern detected")
         }
     }
@@ -522,12 +624,30 @@ class TakeExamActivity : AppCompatActivity() {
         }
     }
 
-    private fun logGazeEvent(type: String, isViolation: Boolean) {
+    private fun logGazeEvent(type: String, isViolation: Boolean, frame: Bitmap? = latestFrame) {
         val now = System.currentTimeMillis()
         if (now - lastGazeViolationTime < gazeViolationCooldownMs) return
         lastGazeViolationTime = now
 
-        violationLog.add(Violation(type = type, timestamp = now))
+        // The proof id is generated locally (no network) so it goes into the violation log
+        // immediately; compression + upload happen on a background thread. Firestore queues
+        // the write offline and retries, so a bad connection won't lose the photo.
+        var proofId = ""
+        if (frame != null && proofsCaptured < maxProofsPerAttempt) {
+            val id = proofRepository.newProofId()
+            try {
+                proofExecutor.execute {
+                    val bytes = ProofImageCodec.compress(frame) ?: return@execute
+                    proofRepository.uploadProof(id, examCode, studentName, type, now, bytes)
+                }
+                proofId = id
+                proofsCaptured++
+            } catch (e: RejectedExecutionException) {
+                // Activity is shutting down; skip the photo.
+            }
+        }
+
+        violationLog.add(Violation(type = type, timestamp = now, proofId = proofId))
         if (isViolation) {
             runOnUiThread { viewModel.recordViolation() }
         }
@@ -552,10 +672,13 @@ class TakeExamActivity : AppCompatActivity() {
         super.onPause()
         if (!examStarted || isSubmitting) return
         isPaused = true
+        pausedAtMs = System.currentTimeMillis()
+        appExitViolationRecorded = false
         val runnable = Runnable {
             if (isPaused && !isSubmitting) {
                 viewModel.recordViolation()
                 violationLog.add(Violation(type = "APP_EXIT", timestamp = System.currentTimeMillis()))
+                appExitViolationRecorded = true
             }
         }
         violationRunnable = runnable
@@ -566,7 +689,39 @@ class TakeExamActivity : AppCompatActivity() {
         super.onResume()
         violationRunnable?.let { violationHandler.removeCallbacks(it) }
         violationRunnable = null
+
+        // The student can't see anything while they're out of the app, so the notice is
+        // shown the moment they come back.
+        val wasPaused = isPaused
         isPaused = false
+        if (wasPaused && examStarted && !isSubmitting && !isFinishing) {
+            showLeftAppNotice(System.currentTimeMillis() - pausedAtMs, appExitViolationRecorded)
+        }
+    }
+
+    private fun showLeftAppNotice(awayMs: Long, violationRecorded: Boolean) {
+        exitDialog?.dismiss()
+        val seconds = "%.1f".format(awayMs / 1000f)
+        val title: String
+        val message: String
+        if (violationRecorded) {
+            title = "You left the exam screen"
+            message = "You were away for $seconds seconds. This was recorded as a violation " +
+                    "and your professor will see it in your results.\n\n" +
+                    "Please stay on the exam screen until you submit."
+        } else {
+            title = "Warning: don't leave the exam"
+            message = "You briefly left the exam screen. Leaving for more than " +
+                    "${violationGraceMs / 1000f} seconds is recorded as a violation. " +
+                    "This time nothing was recorded.\n\n" +
+                    "Please stay on the exam screen until you submit."
+        }
+        exitDialog = AlertDialog.Builder(this)
+            .setTitle(title)
+            .setMessage(message)
+            .setCancelable(false)
+            .setPositiveButton("Continue", null)
+            .show()
     }
 
     private fun startTimer(minutes: Int) {
@@ -623,6 +778,13 @@ class TakeExamActivity : AppCompatActivity() {
         }
         countDownTimer?.cancel()
         violationHandler.removeCallbacksAndMessages(null)
+        warningTone?.release()
+        exitDialog?.dismiss()
+        warningTone = null
         stopMonitoring()
+        proofExecutor.shutdown()   // lets any queued photo writes finish
+        latestFrame = null
+        peakAwayFrame = null
+        synchronized(frameBuffer) { frameBuffer.clear() }
     }
 }

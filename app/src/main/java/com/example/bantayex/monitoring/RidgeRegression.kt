@@ -2,11 +2,6 @@ package com.example.bantayex.monitoring
 
 import kotlin.math.abs
 
-/**
- * Extracted from GazeModels.kt. Logic unchanged — fits a ridge-regularized linear
- * model (used by CalibrationManager to map raw iris position to screen coordinates)
- * via Gaussian elimination on the normal equations.
- */
 object RidgeRegression {
 
     fun fit(

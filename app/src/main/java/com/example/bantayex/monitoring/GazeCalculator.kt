@@ -5,11 +5,6 @@ import kotlin.math.atan2
 import kotlin.math.max
 import kotlin.math.min
 
-/**
- * Extracted from GazeModels.kt (was defined alongside CalibrationManager/RidgeRegression
- * in the same file). Logic unchanged — computes normalized iris position within each eye
- * (from MediaPipe's 478-point face mesh) and head pose from a handful of landmark ratios.
- */
 object GazeCalculator {
 
     fun calculate(landmarks: List<NormalizedLandmark>): GazeData? {
@@ -72,7 +67,6 @@ object GazeCalculator {
         val headPose = calculateHeadPose(landmarks)
 
         return GazeData(
-            direction = GazeDirection.CENTER,
             irisX = avgX,
             irisY = avgY,
             eyeOpenness = eyeOpenness,
@@ -81,7 +75,7 @@ object GazeCalculator {
         )
     }
 
-    fun calculateHeadPose(landmarks: List<NormalizedLandmark>): HeadPose {
+    private fun calculateHeadPose(landmarks: List<NormalizedLandmark>): HeadPose {
         if (landmarks.size < 468) return HeadPose(0f, 0f, 0f)
 
         return try {

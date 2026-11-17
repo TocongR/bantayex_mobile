@@ -125,7 +125,7 @@ class GazeIndicatorOverlayView @JvmOverloads constructor(
 
         messagePaint.textSize = base * 0.065f
         val textY = (cy + (circleRadius * fitScale) + base * 0.16f).coerceAtMost(height - base * 0.04f)
-        canvas.drawText("Yohoo, dito ang tingin! 👀", cx, textY, messagePaint)
+        canvas.drawText("Please keep your eyes on the screen.", cx, textY, messagePaint)
 
         postInvalidateDelayed(16)
     }

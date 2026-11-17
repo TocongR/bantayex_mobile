@@ -52,7 +52,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="During the exam, you must"
+                android:text="Rules to follow"
                 android:textSize="13sp"
                 android:textStyle="bold"
                 android:textColor="@color/text_primary"
@@ -61,7 +61,7 @@
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="• Keep your face visible in the camera at all times\n• Stay looking at your screen — avoid looking away for extended periods\n• Remain on the exam screen — switching apps or leaving is logged\n• Take the exam alone, without assistance"
+                android:text="• Keep your face visible. If your face isn't detected, you get a warning and a beep right away. After 3 seconds it is recorded as a violation.\n• Keep your eyes on the screen. If you look away (with your eyes or by turning your head) for 2 seconds, a warning and a beep appear. If you keep looking away for 3 more seconds, it is recorded as a violation.\n• Don't glance away again and again. Looking away briefly 3 times within 10 seconds is recorded as a repeated look-away violation.\n• Stay on the exam screen. Leaving the app for more than 1.5 seconds is recorded as a violation.\n• Take the exam alone, without assistance."
                 android:textSize="13sp"
                 android:textColor="@color/text_secondary"
                 android:lineSpacingMultiplier="1.4"/>
@@ -78,7 +78,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="How monitoring works"
+                android:text="Good to know"
                 android:textSize="13sp"
                 android:textStyle="bold"
                 android:textColor="@color/text_primary"
@@ -87,7 +87,7 @@
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Your camera checks, on your device only, whether you're looking at the screen and that your face is present. If you look away or your face isn't detected for an extended period, a timestamped note is added to a violation log attached to your result."
+                android:text="• Looking at anything off the screen counts as looking away, including down at your desk, lap or notes.\n• Normal blinking is fine.\n• You get a warning before a look-away or missing-face violation is recorded, so you can correct yourself.\n• After one camera violation, the next one can only be recorded 5 seconds later."
                 android:textSize="13sp"
                 android:textColor="@color/text_secondary"
                 android:lineSpacingMultiplier="1.4"/>
@@ -99,7 +99,7 @@
             android:orientation="vertical"
             android:background="@drawable/input_box"
             android:padding="18dp"
-            android:layout_marginBottom="28dp">
+            android:layout_marginBottom="16dp">
 
             <TextView
                 android:layout_width="wrap_content"
@@ -113,18 +113,38 @@
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="No photos or video are taken, saved, or uploaded. Your professor never sees your camera feed — only the violation log, never images."
+                android:text="Video is never recorded and your professor never sees a live camera feed. However, when a camera-based violation is recorded, a small photo from your front camera is saved with it as evidence (up to 10 per exam). These photos and the violation log are uploaded to the exam system, where your professor can view them. Leaving the app does not take a photo. The photos are intended only for reviewing this exam."
                 android:textSize="13sp"
                 android:textColor="@color/text_secondary"
                 android:lineSpacingMultiplier="1.4"/>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="These photos also protect you. If a violation is recorded by mistake, the photo lets your professor check what really happened and clear it."
+                android:textSize="13sp"
+                android:textColor="@color/text_secondary"
+                android:lineSpacingMultiplier="1.4"
+                android:layout_marginTop="10dp"/>
         </LinearLayout>
+
+        <CheckBox
+            android:id="@+id/cbConsent"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="I understand that photos from my front camera are saved as proof when a camera violation is recorded, and I agree to this."
+            android:textSize="13sp"
+            android:textColor="@color/text_primary"
+            android:buttonTint="@color/primary"
+            android:layout_marginBottom="20dp"/>
 
         <!-- Was: 5 inline attributes duplicating Widget.App.Button.Primary. -->
         <Button
             android:id="@+id/btnContinue"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Continue to exam"
+            android:enabled="false"
+            android:text="Continue"
             style="@style/Widget.App.Button.Primary"/>
 
     </LinearLayout>

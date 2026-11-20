@@ -37,13 +37,12 @@ class ResultsListAdapter(
 
             if (result.violations > 0) {
                 binding.tvViolations.visibility = View.VISIBLE
-                val typesSummary = result.violationLog
-                    .groupingBy { it.type }
-                    .eachCount()
-                    .entries.joinToString(", ") { "${ViolationLabels.labelFor(it.key)}: ${it.value}" }
+                val counts = result.violationLog.groupingBy { it.type }.eachCount().entries
+                val shown = counts.take(3).joinToString(", ") { "${ViolationLabels.labelFor(it.key)}: ${it.value}" }
+                val more = if (counts.size > 3) " +${counts.size - 3} more" else ""
                 binding.tvViolations.text =
-                    "${result.violations} total violation(s)\n$typesSummary" +
-                            (if (!result.gazeMonitoringEnabled) "\n(no camera consent)" else "")
+                    "${result.violations} total violation(s)\n$shown$more" +
+                            (if (!result.gazeMonitoringEnabled) " · no camera consent" else "")
             } else {
                 binding.tvViolations.visibility = View.GONE
             }

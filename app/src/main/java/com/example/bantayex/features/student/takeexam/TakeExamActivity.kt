@@ -296,8 +296,21 @@ class TakeExamActivity : AppCompatActivity() {
         binding.viewPagerQuestions.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
             override fun onPageSelected(position: Int) {
                 binding.tvQuestionCounter.text = "Question ${position + 1} of ${questions.size}"
+                binding.btnPrevQuestion.isEnabled = position > 0
+                binding.btnNextQuestion.isEnabled = position < questions.size - 1
             }
         })
+
+        binding.btnPrevQuestion.setOnClickListener {
+            val current = binding.viewPagerQuestions.currentItem
+            if (current > 0) binding.viewPagerQuestions.setCurrentItem(current - 1, true)
+        }
+        binding.btnNextQuestion.setOnClickListener {
+            val current = binding.viewPagerQuestions.currentItem
+            if (current < questions.size - 1) binding.viewPagerQuestions.setCurrentItem(current + 1, true)
+        }
+        binding.btnPrevQuestion.isEnabled = false
+        binding.btnNextQuestion.isEnabled = questions.size > 1
     }
 
     // ── Monitoring setup ─────────────────────────────────────────────────────

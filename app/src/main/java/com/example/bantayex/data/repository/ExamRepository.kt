@@ -18,6 +18,10 @@ import javax.inject.Inject
  * old hand-written examToMap()/parseExam() functions (~70 lines removed). This works
  * because Exam and Question are plain data classes with default values for every
  * property, which is exactly what Firestore's automatic mapper requires.
+ *
+ * Reads copy the snapshot's document ID into Exam.id. The mapper only fills `id`
+ * from a stored field, and exams created by the web app omit that field, so without
+ * this the ID defaults to "" and edit/delete target an invalid document.
  */
 class ExamRepository @Inject constructor(
     firestore: FirebaseFirestore
@@ -60,7 +64,10 @@ class ExamRepository @Inject constructor(
                 .get()
                 .await()
 
-            val exam = snapshot.documents.firstOrNull()?.toObject(Exam::class.java)
+            val doc = snapshot.documents.firstOrNull()
+                ?: return Result.Error(Exception("Exam not found. Check your code."))
+            val exam = doc.toObject(Exam::class.java)
+                ?.copy(id = doc.id)
                 ?: return Result.Error(Exception("Exam not found. Check your code."))
 
             Result.Success(exam)
@@ -73,6 +80,7 @@ class ExamRepository @Inject constructor(
         return try {
             val doc = examsCollection.document(examId).get().await()
             val exam = doc.toObject(Exam::class.java)
+                ?.copy(id = doc.id)
                 ?: return Result.Error(Exception("Exam not found."))
             Result.Success(exam)
         } catch (e: Exception) {
@@ -86,7 +94,10 @@ class ExamRepository @Inject constructor(
                 .whereEqualTo(FirestoreConstants.FIELD_PROFESSOR_ID, professorId)
                 .get()
                 .await()
-            Result.Success(snapshot.toObjects(Exam::class.java))
+            val exams = snapshot.documents
+                .mapNotNull { doc -> doc.toObject(Exam::class.java)?.copy(id = doc.id) }
+                .sortedByDescending { it.createdAt }
+            Result.Success(exams)
         } catch (e: Exception) {
             Result.Error(Exception("Couldn't load your exams. Check your connection."))
         }

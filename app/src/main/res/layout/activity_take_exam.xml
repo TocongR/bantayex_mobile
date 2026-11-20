@@ -168,6 +168,32 @@
                     android:layout_height="340dp"
                     android:layout_marginBottom="8dp"/>
 
+                <!-- Explicit arrows for students who don't swipe; kept compact
+                     and outlined so they stay visually behind the question card. -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp">
+
+                    <Button
+                        android:id="@+id/btnPrevQuestion"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:text="← Previous"
+                        style="@style/Widget.App.Button.Outlined.Compact" />
+
+                    <Button
+                        android:id="@+id/btnNextQuestion"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_marginStart="8dp"
+                        android:text="Next →"
+                        style="@style/Widget.App.Button.Outlined.Compact" />
+
+                </LinearLayout>
+
                 <!-- Dead space — intentionally empty, users shouldn't need to
                      look down here. Takes up all remaining room below the card. -->
                 <Space

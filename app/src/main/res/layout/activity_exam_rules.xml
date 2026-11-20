@@ -113,7 +113,7 @@
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Video is never recorded and your professor never sees a live camera feed. However, when a camera-based violation is recorded, a small photo from your front camera is saved with it as evidence (up to 10 per exam). These photos and the violation log are uploaded to the exam system, where your professor can view them. Leaving the app does not take a photo. The photos are intended only for reviewing this exam."
+                android:text="Video is never recorded and your professor never sees a live camera feed. However, when a camera-based violation is recorded, a small photo from your front camera is saved with it as evidence. These photos and the violation log are uploaded to the exam system, where your professor can view them. Leaving the app does not take a photo. The photos are intended only for reviewing this exam."
                 android:textSize="13sp"
                 android:textColor="@color/text_secondary"
                 android:lineSpacingMultiplier="1.4"/>
